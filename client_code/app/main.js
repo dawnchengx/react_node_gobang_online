@@ -68,6 +68,16 @@ export default class Game extends React.Component {
     }
 
     handleAgain(){
+      axios.post('http://localhost:8081/game', {
+          room: this.props.match.params.room,
+          squares: Array(board_size* board_size).fill(null),
+          x_is_next : !this.state.xIsNext
+      })//请求发送数据  
+      .then(function (response) {//请求成功
+      }.bind(this)) 
+      .catch(function (error) {//请求失败！  
+        console.log(error);
+      }.bind(this));
       this.setState({
         squares : Array(board_size* board_size).fill(null),
         xIsNext: true,
