@@ -4,7 +4,7 @@ import QRCode from 'qrcode.react';
 import axios from 'axios';
 import qs from 'qs';
 
-const board_size = 20;
+const board_size = 12;
 
 function Square(props) {
     return (
@@ -51,12 +51,12 @@ export default class Game extends React.Component {
         squares: Array(board_size* board_size).fill(null),
         xIsNext: true,
         current_piece: -1,
-        if_done: false
       };
+      this.if_done = false;
+      this.winner = '';
     }
   
     componentDidMount() {
-      // this.handleRefresh();
       this.timerID = setInterval(
         () => this.handleRefresh(),
         1000
@@ -82,24 +82,32 @@ export default class Game extends React.Component {
         squares : Array(board_size* board_size).fill(null),
         xIsNext: true,
         current_piece: -1,
-        if_done: false
       });
+      this.if_done = false; 
+      this.timerID = setInterval(
+        () => this.handleRefresh(),
+        1000
+      );
     }
 
     handleClick(i) {
       const squares = this.state.squares.slice();
-      if ( this.state.if_done || squares[i]) {
+      if ( this.if_done || squares[i]) {
         return;
       }
       
-      console.log(this.props.match.params.room);
-
       squares[i] = this.state.xIsNext ? "●" : "○";
+
+      const wanner = this.calculateWinner();
+      if(wanner){
+        this.if_done = true
+      }
 
       axios.post('http://localhost:8081/game', {
           room: this.props.match.params.room,
           squares: squares,
-          x_is_next : !this.state.xIsNext
+          x_is_next : !this.state.xIsNext,
+          if_done: this.if_done,
       })//请求发送数据  
       .then(function (response) {//请求成功
       }.bind(this)) 
@@ -121,11 +129,13 @@ export default class Game extends React.Component {
         }
       })//请求发送数据  
       .then(function (response) {//请求成功
+        console.log(response.data);
         if('undefined' != typeof response.data.game){
           this.setState({
             squares : response.data.game,
-            xIsNext: response.data.x_is_next
+            xIsNext: response.data.x_is_next,
           });
+          this.if_done = response.data.if_done;
         }
       }.bind(this)) 
       .catch(function (error) {//请求失败！  
@@ -134,8 +144,12 @@ export default class Game extends React.Component {
     }
 
     calculateWinner() {
-      let current = this.state.current_piece;
       let piece_type = (this.state.xIsNext ? "○" : "●");
+      if(this.if_done){
+        clearInterval(this.timerID);
+        return piece_type == "○" ? '白子' : '黑子';
+      }
+      let current = this.state.current_piece;
       let squares = this.state.squares;
       let is_continuous_arr = [
         true, true, true, true, 
@@ -195,7 +209,8 @@ export default class Game extends React.Component {
           is_continuous_arr[7] = false;
         }
         if(4 == winner_arr[0]+winner_arr[1] || 4 == winner_arr[2]+winner_arr[3] || 4 == winner_arr[4]+winner_arr[5] || 4 == winner_arr[6]+winner_arr[7]){
-          this.state.if_done = true;
+          this.if_done = true;
+          clearInterval(this.timerID);
           return piece_type == "○" ? '白子' : '黑子';
         }
       }
@@ -204,20 +219,17 @@ export default class Game extends React.Component {
 
     render() {
       const winner = this.calculateWinner();
-      
+      this.winner = winner;
+
+      console.log(winner);
+
       let status;
-      let if_again = '';
       if (winner) {
         status = "胜利者: " + winner;
-        if_again = (
-          <button onClick={i => this.handleAgain(i)}>再来一局</button>
-        );
       } else {
         status = "下一个下棋者: " + (this.state.xIsNext ? "黑子 ●" : "白子 ○");
       }
   
-      console.log(this.props);
-
       return (
         <div className="game">
           <div className="game-board">
@@ -228,8 +240,7 @@ export default class Game extends React.Component {
           </div>
           <div className="game-info">
             <div>{status}</div>
-            <div>{if_again}</div>
-            <div><QRCode value={window.location.href} /></div>
+            <div><button onClick={() => this.handleAgain()}>再来一局</button></div>
           </div>
         </div>
       );

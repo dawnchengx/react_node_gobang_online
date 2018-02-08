@@ -55,7 +55,8 @@ app.post('/game', function (req, resource) {
     var squares = req.body.squares;
     var in_redis = {
         x_is_next: req.body.x_is_next,
-        squares: squares
+        squares: squares,
+        if_done: req.body.if_done,
     }
     in_redis = JSON.stringify(in_redis);
     var key = 'room:'+ req.body.room;
@@ -80,7 +81,8 @@ app.get('/game', function (req, resource) {
             resource.send({
                 'status': 0,
                 'game' : res.squares,
-                'x_is_next': res.x_is_next
+                'x_is_next': res.x_is_next,
+                if_done: res.if_done,
             });
         }
     });
